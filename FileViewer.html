@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Universal File Viewer</title>
+
+<!-- Prism.js（コード色分け） -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
+<style>
+  body { font-family: sans-serif; margin: 20px; }
+  .file-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; }
+  .file-name { font-weight: bold; margin-bottom: 5px; }
+  iframe { width: 100%; height: 400px; border: 1px solid #aaa; }
+  img { max-width: 100%; height: auto; }
+  video, audio { width: 100%; margin-top: 10px; }
+  pre { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<h1> 　　　Universal File Viewer</h1>
+<input id="fileInput" type="file" multiple>
+<div id="fileList"></div>
+
+<script>
+const input = document.getElementById("fileInput");
+const list = document.getElementById("fileList");
+
+input.addEventListener("change", () => {
+  list.innerHTML = "";
+  const files = Array.from(input.files);
+
+  files.forEach(file => {
+    const ext = file.name.toLowerCase().split(".").pop();
+    const item = createItem(file.name);
+
+    if (ext === "exe") {
+      item.append("⚠ exe は開けません");
+      list.appendChild(item);
+      return;
+    }
+
+    // 画像
+    if (file.type.startsWith("image/")) {
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(file);
+      item.appendChild(img);
+    }
+
+    // 音声
+    else if (file.type.startsWith("audio/")) {
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.src = URL.createObjectURL(file);
+      item.appendChild(audio);
+    }
+
+    // 動画
+    else if (file.type.startsWith("video/")) {
+      const video = document.createElement("video");
+      video.controls = true;
+      video.src = URL.createObjectURL(file);
+      item.appendChild(video);
+    }
+
+    // PDF
+    else if (file.type === "application/pdf") {
+      const iframe = document.createElement("iframe");
+      iframe.src = URL.createObjectURL(file);
+      item.appendChild(iframe);
+    }
+
+    // HTML → 実行可能
+    else if (ext === "html" || ext === "htm") {
+      const iframe = document.createElement("iframe");
+      iframe.src = URL.createObjectURL(file);
+      item.appendChild(iframe);
+    }
+
+    // コード（色分け）
+    else if (isCodeExt(ext) || file.type.startsWith("text/")) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const pre = document.createElement("pre");
+        const code = document.createElement("code");
+
+        code.className = "language-" + detectLang(ext);
+        code.textContent = e.target.result;
+
+        pre.appendChild(code);
+        item.appendChild(pre);
+
+        Prism.highlightElement(code);
+      };
+      reader.readAsText(file);
+    }
+
+    // その他 → iframe で開いてみる
+    else {
+      const iframe = document.createElement("iframe");
+      iframe.src = URL.createObjectURL(file);
+      item.appendChild(iframe);
+    }
+
+    list.appendChild(item);
+  });
+});
+
+function createItem(name) {
+  const div = document.createElement("div");
+  div.className = "file-item";
+  const title = document.createElement("div");
+  title.className = "file-name";
+  title.textContent = name;
+  div.appendChild(title);
+  return div;
+}
+
+function isCodeExt(ext) {
+  return [
+    "js","ts","json","html","css","py","rb","rs","go","php","lua",
+    "c","cpp","h","hpp","cs","java","sh","bat","md","yml","yaml","toml"
+  ].includes(ext);
+}
+
+function detectLang(ext) {
+  const map = {
+    js: "javascript",
+    ts: "javascript",
+    json: "json",
+    html: "markup",
+    htm: "markup",
+    css: "css",
+    py: "python",
+    rb: "ruby",
+    rs: "rust",
+    go: "go",
+    php: "php",
+    lua: "lua",
+    c: "c",
+    h: "c",
+    cpp: "cpp",
+    hpp: "cpp",
+    cs: "csharp",
+    java: "java",
+    sh: "bash",
+    bat: "batch",
+    md: "markdown",
+    yml: "yaml",
+    yaml: "yaml",
+    toml: "toml"
+  };
+  return map[ext] || "none";
+}
+</script>
+
+</body>
+</html>
